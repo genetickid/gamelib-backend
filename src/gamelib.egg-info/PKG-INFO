@@ -1,0 +1,14 @@
+Metadata-Version: 2.4
+Name: gamelib
+Version: 0.0.1
+Requires-Dist: fastapi>=0.130.0
+Requires-Dist: uvicorn>=0.49.0
+Requires-Dist: sqlalchemy>=2.0.51
+Requires-Dist: pydantic>=2.13.0
+Requires-Dist: alembic>=1.18.4
+Requires-Dist: aiosqlite>=0.22.1
+Requires-Dist: asyncpg>=0.31.0
+Requires-Dist: python-multipart>=0.0.32
+Requires-Dist: pwdlib[argon2]
+Requires-Dist: pyjwt
+Requires-Dist: pydantic-settings
