@@ -1,21 +1,24 @@
-from typing import Callable
+from typing import Awaitable, Callable
+
 import jwt
 from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from jwt.exceptions import InvalidTokenError
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from gamelib.config import settings
+from gamelib.constants import USER_NOT_FOUND_MSG
 from gamelib.database import get_db
-from gamelib.models import UserModel
+from gamelib.exceptions.common import ObjNotFoundError
+from gamelib.models import User
 from gamelib.schemas import UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='auth/login')
 
-def get_current_user(
+async def get_current_user(
     token: str = Depends(oauth2_scheme),
-    db: Session = Depends(get_db)
-) -> UserModel:
+    db: AsyncSession = Depends(get_db)
+) -> User:
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail='Could not validate credentials',
@@ -31,7 +34,7 @@ def get_current_user(
     except (InvalidTokenError, TypeError, ValueError):
         raise credentials_exception
 
-    user = db.get(UserModel, user_id)
+    user = await db.get(User, user_id)
 
     if user is None:
         raise credentials_exception
@@ -39,8 +42,8 @@ def get_current_user(
     return user
 
 
-def require_role(*roles: UserRole) -> Callable[[UserModel], UserModel]:
-    def check_role(user: UserModel = Depends(get_current_user)) -> UserModel:
+def require_role(*roles: UserRole) -> Callable[[User], Awaitable[User]]:
+    async def check_role(user: User = Depends(get_current_user)) -> User:
         if user.role not in roles:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
@@ -50,11 +53,8 @@ def require_role(*roles: UserRole) -> Callable[[UserModel], UserModel]:
     return check_role
 
 
-def require_staff_or_owner(
-    user_id: int, current_user: UserModel = Depends(get_current_user)
+async def require_staff_or_owner(
+    user_id: int, current_user: User = Depends(get_current_user)
 ) -> None:
     if not current_user.is_staff and current_user.id != user_id:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='User not found'
-        )
+        raise ObjNotFoundError(USER_NOT_FOUND_MSG)

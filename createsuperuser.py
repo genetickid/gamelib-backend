@@ -1,8 +1,8 @@
 from gamelib.database import SessionLocal
-from gamelib.exceptions import UserAlreadyExistsError
-from gamelib.schemas import UserAuth
-from gamelib.schemas import UserRole
+from gamelib.exceptions.common import UserAlreadyExistsError
+from gamelib.schemas import UserAuth, UserRole
 from gamelib.utils.db import create_user_in_db
+
 
 def main():
     username = input('Username: ')

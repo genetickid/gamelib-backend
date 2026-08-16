@@ -21,17 +21,13 @@ GameGenre = Annotated[str, Field(max_length=200)]
 class BaseGame(BaseModel):
     title: GameTitle
     genre: GameGenre
-    hours_played: GameHours = 0.0
-    rating: GameRating | None = None
     release_date: date | None = None
-    status: GameStatus = GameStatus.BACKLOG
 
 
 class GameRead(BaseGame):
     model_config = ConfigDict(from_attributes=True)
 
     id: int
-    added_at: datetime
 
 
 class GameWrite(BaseGame):
@@ -41,10 +37,30 @@ class GameWrite(BaseGame):
 class GameUpdate(BaseModel):
     title: GameTitle | None = None
     genre: GameGenre | None = None
+    release_date: date | None = None
+
+
+class BaseUserGame(BaseModel):
+    hours_played: GameHours = 0.0
+    rating: GameRating | None = None
+    status: GameStatus = GameStatus.BACKLOG
+
+
+class UserGameWrite(BaseUserGame):
+    game_id: int
+
+
+class UserGameUpdate(BaseModel):
     hours_played: GameHours | None = None
     rating: GameRating | None = None
-    release_date: date | None = None
     status: GameStatus | None = None
+
+
+class UserLibraryEntryRead(BaseUserGame):
+    model_config = ConfigDict(from_attributes=True)
+
+    game: GameRead
+    added_at: datetime
 
 
 Username = Annotated[str, Field(min_length=2, max_length=32)]
@@ -76,6 +92,11 @@ class UserRead(BaseUser):
 
     id: int
     role: UserRole
+
+
+class UserUpdate(BaseModel):
+    name: str | None = None
+    about: str | None = None
 
 
 class Token(BaseModel):

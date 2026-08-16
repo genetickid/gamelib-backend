@@ -1,17 +1,18 @@
-from fastapi import HTTPException, status
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
-from gamelib.models import UserModel
+from gamelib.exceptions.common import UserAlreadyExistsError
+from gamelib.models import User
 from gamelib.schemas import UserAuth, UserRole
 from gamelib.security import get_password_hash
-from gamelib.exceptions import UserAlreadyExistsError
 
-def create_user_in_db(
-    db: Session,
+
+async def create_user_in_db(
+    db: AsyncSession,
     user_data: UserAuth,
     role: UserRole
-) -> UserModel:
+) -> User:
     password_hash = get_password_hash(user_data.password)
     fields_to_include = set(UserAuth.model_fields.keys())
     fields_to_exclude = {'password'}
@@ -19,16 +20,30 @@ def create_user_in_db(
         include=fields_to_include,
         exclude=fields_to_exclude
     )
-    user = UserModel(
+    user = User(
         password_hash=password_hash,
         role=role,
         **user_data_dict
     )
     db.add(user)
     try:
-        db.commit()
+        await db.commit()
     except IntegrityError:
-        db.rollback()
-        raise UserAlreadyExistsError('User with this username already exists')
+        await db.rollback()
+        raise UserAlreadyExistsError()
 
     return user
+
+async def is_user_last_admin(db: AsyncSession, user: User) -> bool:
+    if user.role != UserRole.ADMIN:
+        return False
+
+    stmt = (
+        select(User.id)
+        .where(User.role == UserRole.ADMIN)
+        .with_for_update()
+    )
+    result = await db.scalars(stmt)
+    admin_ids = result.all()
+
+    return len(admin_ids) == 1

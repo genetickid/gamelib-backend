@@ -1,9 +1,9 @@
 pyproject.toml
 src/gamelib/__init__.py
 src/gamelib/config.py
+src/gamelib/constants.py
 src/gamelib/database.py
 src/gamelib/dependencies.py
-src/gamelib/exceptions.py
 src/gamelib/lifespan.py
 src/gamelib/main.py
 src/gamelib/models.py
@@ -14,6 +14,9 @@ src/gamelib.egg-info/SOURCES.txt
 src/gamelib.egg-info/dependency_links.txt
 src/gamelib.egg-info/requires.txt
 src/gamelib.egg-info/top_level.txt
+src/gamelib/exceptions/__init__.py
+src/gamelib/exceptions/common.py
+src/gamelib/exceptions/web.py
 src/gamelib/routers/__init__.py
 src/gamelib/routers/auth.py
 src/gamelib/routers/games.py

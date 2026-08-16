@@ -1,0 +1,4 @@
+USER_NOT_FOUND_MSG = 'User not found'
+GAME_NOT_FOUND_MSG = 'Game not found'
+PG_UNIQUE_VIOLATION = '23505'
+PG_FK_VIOLATION = '23503'

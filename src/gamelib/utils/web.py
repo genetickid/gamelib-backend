@@ -1,19 +1,16 @@
-from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
+from sqlalchemy.ext.asyncio import AsyncSession
 
+from gamelib.exceptions.common import ObjNotFoundError
 from gamelib.models import Base
 
 
-def get_obj_or_404[ModelType: Base](
+async def get_obj_or_404[ModelType: Base](
     db_model: type[ModelType],
     pk: int,
-    db: Session,
+    db: AsyncSession,
     error_msg: str = 'Object not found'
 ) -> ModelType:
-    obj = db.get(db_model, pk)
+    obj = await db.get(db_model, pk)
     if obj is None:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=error_msg
-        )
+        raise ObjNotFoundError(error_msg)
     return obj
