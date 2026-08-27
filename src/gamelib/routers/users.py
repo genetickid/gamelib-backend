@@ -1,18 +1,32 @@
 from fastapi import APIRouter, Body, Depends, status
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import selectinload
 
 from gamelib.constants import (
-    USER_NOT_FOUND_MSG, GAME_NOT_FOUND_MSG, PG_UNIQUE_VIOLATION,
-    PG_FK_VIOLATION
+    GAME_NOT_FOUND_MSG,
+    PG_FK_VIOLATION,
+    PG_UNIQUE_VIOLATION,
+    USER_NOT_FOUND_MSG,
 )
 from gamelib.database import get_db
 from gamelib.dependencies import get_current_user, require_role, require_staff_or_owner
-from gamelib.exceptions.common import LibraryEntryAlreadyExistsError, ObjNotFoundError, UserAlreadyExistsError
-from gamelib.exceptions.web import LastAdminProtectionError
-from gamelib.models import User, Game, UserGame
+from gamelib.exceptions import (
+    LastAdminProtectionError,
+    LibraryEntryAlreadyExistsError,
+    ObjNotFoundError,
+    UserAlreadyExistsError,
+)
+from gamelib.models import Game, User, UserGame
 from gamelib.schemas import (
-    UserCreate, Username, UserRead, UserRole, UserUpdate, UserLibraryEntryRead, UserGameWrite, UserGameUpdate
+    UserCreate,
+    UserGameWrite,
+    UserLibraryEntryRead,
+    Username,
+    UserRead,
+    UserRole,
+    UserUpdate,
 )
 from gamelib.utils.db import create_user_in_db, is_user_last_admin
 from gamelib.utils.web import get_obj_or_404
@@ -175,7 +189,7 @@ async def create_library_entry(
     new_library_entry = UserGame(
         user_id=user_id,
         game=game,
-        **library_entry.model_dump()
+        **library_entry.model_dump(exclude={'game_id'})
     )
 
     db.add(new_library_entry)
@@ -185,11 +199,34 @@ async def create_library_entry(
         await db.rollback()
         error_code = exc.orig.sqlstate
         if error_code == PG_FK_VIOLATION:
-            raise ObjNotFoundError(GAME_NOT_FOUND_MSG)
+            raise ObjNotFoundError()
         elif error_code == PG_UNIQUE_VIOLATION:
             raise LibraryEntryAlreadyExistsError()
         else:
             raise
-    
-    await db.refresh(new_library_entry)
+
     return new_library_entry
+
+
+@router.get(
+    '/{user_id}/library',
+    status_code=status.HTTP_200_OK,
+    dependencies=[Depends(require_staff_or_owner)]
+)
+async def get_library(
+    user_id: int,
+    db: AsyncSession = Depends(get_db)
+) -> list[UserLibraryEntryRead]:
+    await get_obj_or_404(
+        db_model=User,
+        pk=user_id,
+        db=db,
+        error_msg=USER_NOT_FOUND_MSG
+    )
+    stmt = (
+        select(UserGame)
+        .where(UserGame.user_id == user_id)
+        .options(selectinload(UserGame.game))
+    )
+    library_entries = await db.scalars(stmt)
+    return library_entries.all()

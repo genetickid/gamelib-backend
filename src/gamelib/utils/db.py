@@ -2,7 +2,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from gamelib.exceptions.common import UserAlreadyExistsError
+from gamelib.exceptions import UserAlreadyExistsError
 from gamelib.models import User
 from gamelib.schemas import UserAuth, UserRole
 from gamelib.security import get_password_hash

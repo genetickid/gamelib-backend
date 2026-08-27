@@ -1,6 +1,6 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from gamelib.exceptions.common import ObjNotFoundError
+from gamelib.exceptions import ObjNotFoundError
 from gamelib.models import Base
 
 

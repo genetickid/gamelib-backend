@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from gamelib.config import settings
 from gamelib.constants import USER_NOT_FOUND_MSG
 from gamelib.database import get_db
-from gamelib.exceptions.common import ObjNotFoundError
+from gamelib.exceptions import ObjNotFoundError
 from gamelib.models import User
 from gamelib.schemas import UserRole
 

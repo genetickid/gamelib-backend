@@ -21,7 +21,7 @@ GameGenre = Annotated[str, Field(max_length=200)]
 class BaseGame(BaseModel):
     title: GameTitle
     genre: GameGenre
-    release_date: date | None = None
+    release_date: date | None
 
 
 class GameRead(BaseGame):
@@ -31,7 +31,7 @@ class GameRead(BaseGame):
 
 
 class GameWrite(BaseGame):
-    pass
+    release_date: date | None = None
 
 
 class GameUpdate(BaseModel):
@@ -40,14 +40,11 @@ class GameUpdate(BaseModel):
     release_date: date | None = None
 
 
-class BaseUserGame(BaseModel):
+class UserGameWrite(BaseModel):
+    game_id: int
     hours_played: GameHours = 0.0
     rating: GameRating | None = None
     status: GameStatus = GameStatus.BACKLOG
-
-
-class UserGameWrite(BaseUserGame):
-    game_id: int
 
 
 class UserGameUpdate(BaseModel):
@@ -56,9 +53,12 @@ class UserGameUpdate(BaseModel):
     status: GameStatus | None = None
 
 
-class UserLibraryEntryRead(BaseUserGame):
+class UserLibraryEntryRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+    hours_played: GameHours
+    rating: GameRating | None
+    status: GameStatus
     game: GameRead
     added_at: datetime
 

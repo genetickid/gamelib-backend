@@ -1,13 +1,15 @@
 import itertools
+from contextlib import contextmanager
 
 import pytest
-from httpx import AsyncClient, ASGITransport
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from httpx import ASGITransport, AsyncClient
+from sqlalchemy import event
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 
 from gamelib.config import settings
 from gamelib.database import get_db
 from gamelib.main import app
-from gamelib.models import Base, User
+from gamelib.models import Base, Game, User
 from gamelib.schemas import UserRole
 from gamelib.security import create_access_token
 
@@ -49,7 +51,12 @@ async def session(engine):
 @pytest.fixture(scope='function')
 async def client(session):
     async def get_test_db():
-        yield session
+        async with AsyncSession(
+            bind=session.bind,
+            join_transaction_mode='create_savepoint',
+            expire_on_commit=False
+        ) as http_request_session:
+            yield http_request_session
 
     app.dependency_overrides[get_db] = get_test_db
     yield AsyncClient(transport=ASGITransport(app), base_url='http://test')
@@ -71,3 +78,41 @@ def make_user(session):
         headers = {'Authorization': f'Bearer {token}'}
         return user.id, headers
     return factory
+
+
+@pytest.fixture(scope='function')
+def make_game(session):
+    game_counter = itertools.count(start=1)
+    async def factory():
+        game = Game(
+           title=f'test_game_{next(game_counter)}',
+           genre='shooter',
+           release_date=None
+        )
+        session.add(game)
+        await session.flush()
+        return game
+    return factory
+
+
+@pytest.fixture(scope='function')
+def query_counter(engine):
+    TRACKED_COMMANDS = {'SELECT', 'INSERT', 'UPDATE', 'DELETE', 'WITH'}
+
+    @contextmanager
+    def counter():
+        queries = []
+
+        def before_cursor_execute(conn, cursor, statement, *args):
+            parts = statement.strip().split(maxsplit=1)
+            if parts and parts[0].upper() in TRACKED_COMMANDS:
+                queries.append(statement)
+
+        event.listen(engine.sync_engine, 'before_cursor_execute', before_cursor_execute)
+        try:
+            yield queries
+        finally:
+            event.remove(engine.sync_engine, 'before_cursor_execute', before_cursor_execute)
+
+    return counter
+

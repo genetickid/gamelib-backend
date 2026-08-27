@@ -20,3 +20,8 @@ class LibraryEntryAlreadyExistsError(ObjAlreadyExistsError):
 class ObjNotFoundError(GamelibError):
     def __init__(self, message: str = 'Object not found.'):
         super().__init__(message)
+
+
+class LastAdminProtectionError(GamelibError):
+    def __init__(self, message: str = 'Cannot remove or demote the last admin.'):
+        super().__init__(message)

@@ -1,18 +1,19 @@
 import re
 
+
 def process_file(filepath):
     with open(filepath, 'r') as f:
         content = f.read()
 
     # Add async to def test_
     content = re.sub(r'^def test_', 'async def test_', content, flags=re.MULTILINE)
-    
+
     # Add await to client.get, client.post, etc.
     content = re.sub(r'(\s+.*?= |^\s*)client\.(get|post|put|patch|delete)\(', r'\1await client.\2(', content, flags=re.MULTILINE)
-    
+
     # Add await to make_user
     content = re.sub(r'(\s+.*?= |^\s*)make_user\(', r'\1await make_user(', content, flags=re.MULTILINE)
-    
+
     # Process specific test_is_user_last_admin_lock in test_users.py
     if 'test_is_user_last_admin_lock' in content:
         # replace Session with AsyncSession

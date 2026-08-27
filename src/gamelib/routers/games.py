@@ -10,7 +10,9 @@ from gamelib.utils.web import get_obj_or_404
 router = APIRouter(prefix='/games', tags=['games'])
 
 @router.get('')
-async def games_list(db: AsyncSession = Depends(get_db)) -> list[GameRead]:
+async def games_list(
+    db: AsyncSession = Depends(get_db)
+) -> list[GameRead]:
     stmt = select(Game)
     result = await db.scalars(stmt)
     games = result.all()
@@ -18,11 +20,17 @@ async def games_list(db: AsyncSession = Depends(get_db)) -> list[GameRead]:
 
 
 @router.get('/{game_id}')
-async def get_game(game_id: int, db: AsyncSession = Depends(get_db)) -> GameRead:
+async def get_game(
+    game_id: int,
+    db: AsyncSession = Depends(get_db)
+) -> GameRead:
     return await get_obj_or_404(Game, game_id, db, 'Game not found')
 
 @router.post('/')
-async def add_game(game_data: GameWrite, db: AsyncSession = Depends(get_db)) -> GameRead:
+async def add_game(
+    game_data: GameWrite,
+    db: AsyncSession = Depends(get_db)
+) -> GameRead:
     game_obj = Game(**game_data.model_dump())
     db.add(game_obj)
     await db.commit()
@@ -31,7 +39,10 @@ async def add_game(game_data: GameWrite, db: AsyncSession = Depends(get_db)) -> 
 
 
 @router.delete('/{game_id}', status_code=status.HTTP_204_NO_CONTENT)
-async def delete_game(game_id: int, db: AsyncSession = Depends(get_db)) -> None:
+async def delete_game(
+    game_id: int,
+    db: AsyncSession = Depends(get_db)
+) -> None:
     game = await get_obj_or_404(Game, game_id, db, 'Game not found')
     await db.delete(game)
     await db.commit()

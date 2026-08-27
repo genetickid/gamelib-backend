@@ -1,6 +1,6 @@
 from datetime import date, datetime
 
-from sqlalchemy import Enum, ForeignKey, String, Text, func
+from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, func
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 
 from gamelib.schemas import GameStatus, UserRole
@@ -55,7 +55,10 @@ class UserGame(Base):
     game: Mapped['Game'] = relationship(back_populates='library_entries')
 
     hours_played: Mapped[float] = mapped_column(default=0.0)
-    added_at: Mapped[datetime] = mapped_column(server_default=func.now())
+    added_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now()
+    )
     rating: Mapped[float | None] = mapped_column()
     status: Mapped[GameStatus] = mapped_column(
         Enum(GameStatus, values_callable=enum_values),
