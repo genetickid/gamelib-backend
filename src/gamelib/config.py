@@ -8,6 +8,8 @@ class Settings(BaseSettings):
     SECRET_KEY: str
     JWT_ALGORITHM: str = 'HS256'
     DUMMY_PASS: str
+    STEAM_API_KEY: str | None = None
+    STEAM_ID: str | None = None
     DB_USERNAME: str = "postgres"
     DB_PASSWORD: str = "postgres"
     DB_HOST: str = "localhost"
