@@ -29,7 +29,7 @@ async def test_create_library_entry(client, make_user, make_game, query_counter)
     assert abs((added_at - now).total_seconds()) < 5
 
     assert data['status'] == GameStatus.BACKLOG
-    assert data['hours_played'] == 0.0
+    assert data['playtime_minutes'] == 0
     assert data['rating'] is None
 
     game_data = data['game']
@@ -197,7 +197,7 @@ async def test_library_entry_data_consistency(client, make_user, make_game):
         f'{BASE_URL}/{user_id}/library',
         json={
             'game_id': game.id,
-            'hours_played': 11.0,
+            'playtime_minutes': 110,
             'status': GameStatus.COMPLETED,
         },
         headers=headers,
@@ -216,7 +216,7 @@ async def test_library_entry_data_consistency(client, make_user, make_game):
     assert lib_entry['game']['id'] == game.id
     assert lib_entry['game']['title'] == game.title
     assert lib_entry['game']['genre'] == game.genre
-    assert lib_entry['hours_played'] == 11.0
+    assert lib_entry['playtime_minutes'] == 110
     assert lib_entry['status'] == GameStatus.COMPLETED
 
 

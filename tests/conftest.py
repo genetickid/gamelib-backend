@@ -83,10 +83,10 @@ def make_user(session):
 @pytest.fixture(scope='function')
 def make_game(session):
     game_counter = itertools.count(start=1)
-    async def factory():
+    async def factory(genre='shooter'):
         game = Game(
            title=f'test_game_{next(game_counter)}',
-           genre='shooter',
+           genre=genre,
            release_date=None
         )
         session.add(game)

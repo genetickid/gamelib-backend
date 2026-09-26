@@ -3,8 +3,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from gamelib.database import get_db
+from gamelib.dependencies import require_role
 from gamelib.models import Game
-from gamelib.schemas import GameRead, GameUpdate, GameWrite
+from gamelib.schemas import GameRead, GameUpdate, GameWrite, UserRole
 from gamelib.utils.web import get_obj_or_404
 
 router = APIRouter(prefix='/games', tags=['games'])
@@ -26,7 +27,11 @@ async def get_game(
 ) -> GameRead:
     return await get_obj_or_404(Game, game_id, db, 'Game not found')
 
-@router.post('/')
+@router.post(
+    '',
+    dependencies=[Depends(require_role(UserRole.ADMIN))],
+    status_code=status.HTTP_201_CREATED
+)
 async def add_game(
     game_data: GameWrite,
     db: AsyncSession = Depends(get_db)
@@ -38,7 +43,11 @@ async def add_game(
     return game_obj
 
 
-@router.delete('/{game_id}', status_code=status.HTTP_204_NO_CONTENT)
+@router.delete(
+    '/{game_id}',
+    dependencies=[Depends(require_role(UserRole.ADMIN))],
+    status_code=status.HTTP_204_NO_CONTENT
+)
 async def delete_game(
     game_id: int,
     db: AsyncSession = Depends(get_db)
@@ -48,7 +57,10 @@ async def delete_game(
     await db.commit()
 
 
-@router.patch('/{game_id}')
+@router.patch(
+    '/{game_id}',
+    dependencies=[Depends(require_role(UserRole.ADMIN))]
+)
 async def update_game(
     game_id: int,
     update_fields: GameUpdate,
