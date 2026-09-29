@@ -6,6 +6,30 @@ from gamelib.schemas import UserRole
 BASE_URL = '/games'
 
 
+async def test_anon_can_read_game_catalog(client, make_game):
+    game = await make_game()
+
+    response = await client.get(BASE_URL)
+
+    assert response.status_code == status.HTTP_200_OK
+    data = response.json()
+    assert len(data) == 1
+    game_data = data[0]
+    assert game_data['id'] == game.id
+    assert game_data['title'] == game.title
+
+
+async def test_anon_can_read_game(client, make_game):
+    game = await make_game()
+
+    response = await client.get(f'{BASE_URL}/{game.id}')
+
+    assert response.status_code == status.HTTP_200_OK
+    game_data = response.json()
+    assert game_data['id'] == game.id
+    assert game_data['title'] == game.title
+
+
 @pytest.mark.parametrize(
     'role, expected_status',
     [
