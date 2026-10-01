@@ -74,6 +74,7 @@ class UserLibraryEntryRead(BaseModel):
 
 Username = Annotated[str, Field(min_length=2, max_length=32)]
 Password = Annotated[str, Field(min_length=8, max_length=64)]
+SteamID = Annotated[str, Field(pattern=r'^76561(?:19|20)[0-9]{10}$')]
 
 
 class UserRole(str, enum.Enum):
@@ -101,11 +102,13 @@ class UserRead(BaseUser):
 
     id: int
     role: UserRole
+    steam_id: str | None
 
 
 class UserUpdate(BaseModel):
     name: str | None = None
     about: str | None = None
+    steam_id: SteamID | None = None
 
 
 class Token(BaseModel):

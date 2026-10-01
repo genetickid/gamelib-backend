@@ -51,6 +51,7 @@ class User(Base):
     library_entries: Mapped[list['UserGame']] = relationship(
         back_populates='user'
     )
+    steam_id: Mapped[str | None] = mapped_column(String(17))
 
     @property
     def is_staff(self) -> bool:

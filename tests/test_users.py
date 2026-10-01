@@ -9,6 +9,13 @@ from gamelib.schemas import UserRole
 from gamelib.utils.db import is_user_last_admin
 
 BASE_URL = '/users'
+TEST_STEAM_ID = '76561198087654321'
+OTHER_STEAM_ID = '76561198012345678'
+STEAM_ID_UPDATE_CASES = [
+    pytest.param(None, TEST_STEAM_ID, id='set_valid_id'),
+    pytest.param(TEST_STEAM_ID, OTHER_STEAM_ID, id='replace_id'),
+    pytest.param(TEST_STEAM_ID, None, id='remove_id'),
+]
 
 
 async def test_integrity_check_first_half(session):
@@ -331,3 +338,185 @@ async def test_is_user_last_admin_lock(engine):
             await session1.delete(admin1)
             await session1.delete(admin2)
             await session1.commit()
+
+
+@pytest.mark.parametrize('old_steam_id, new_steam_id', STEAM_ID_UPDATE_CASES)
+async def test_user_can_update_own_steam_id(
+    client, make_user, old_steam_id, new_steam_id
+):
+    user_id, headers = await make_user(
+        UserRole.USER, steam_id=old_steam_id
+    )
+    url = f'{BASE_URL}/{user_id}'
+
+    response = await client.patch(
+        url,
+        headers=headers,
+        json={'steam_id': new_steam_id}
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()['id'] == user_id
+    assert response.json()['steam_id'] == new_steam_id
+
+    response = await client.get(url, headers=headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()['steam_id'] == new_steam_id
+
+
+@pytest.mark.parametrize('old_steam_id, new_steam_id', STEAM_ID_UPDATE_CASES)
+async def test_user_cant_update_other_user_steam_id(
+    client, make_user, old_steam_id, new_steam_id
+):
+    _, headers = await make_user(UserRole.USER)
+    user_id, user_headers = await make_user(
+        UserRole.USER, steam_id=old_steam_id
+    )
+    url = f'{BASE_URL}/{user_id}'
+
+    response = await client.patch(
+        url,
+        headers=headers,
+        json={'steam_id': new_steam_id}
+    )
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND, response.text
+
+    response = await client.get(url, headers=user_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()['steam_id'] == old_steam_id
+
+
+@pytest.mark.parametrize('old_steam_id, new_steam_id', STEAM_ID_UPDATE_CASES)
+async def test_admin_can_update_other_user_steam_id(
+    client, make_user, old_steam_id, new_steam_id
+):
+    _, admin_headers = await make_user(UserRole.ADMIN)
+    user_id, user_headers = await make_user(
+        UserRole.USER, steam_id=old_steam_id
+    )
+    url = f'{BASE_URL}/{user_id}'
+
+    response = await client.patch(
+        url,
+        headers=admin_headers,
+        json={'steam_id': new_steam_id}
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()['id'] == user_id
+    assert response.json()['steam_id'] == new_steam_id
+
+    response = await client.get(url, headers=user_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.text
+    assert response.json()['steam_id'] == new_steam_id
+
+    response = await client.get(f'{BASE_URL}/me', headers=admin_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()['steam_id'] is None
+
+
+@pytest.mark.parametrize('old_steam_id, new_steam_id', STEAM_ID_UPDATE_CASES)
+async def test_anon_cant_update_steam_id(
+    client, make_user, old_steam_id, new_steam_id
+):
+    user_id, headers = await make_user(
+        UserRole.USER, steam_id=old_steam_id
+    )
+    url = f'{BASE_URL}/{user_id}'
+
+    response = await client.patch(url, json={'steam_id': new_steam_id})
+
+    assert response.status_code == status.HTTP_401_UNAUTHORIZED
+
+    response = await client.get(url, headers=headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()['steam_id'] == old_steam_id
+
+
+@pytest.mark.parametrize(
+    'invalid_steam_id',
+    [
+        pytest.param('', id='empty'),
+        pytest.param(TEST_STEAM_ID[:-1], id='too_short'),
+        pytest.param(TEST_STEAM_ID + '1', id='too_long'),
+        pytest.param('86561191111111111', id='wrong_prefix'),
+        pytest.param('76561211111111111', id='wrong_prefix_2'),
+        pytest.param(TEST_STEAM_ID[:-1] + 'a', id='contains_letter'),
+        pytest.param(' ' + TEST_STEAM_ID, id='leading_space'),
+        pytest.param(TEST_STEAM_ID + '\n', id='trailing_newline'),
+        pytest.param(76561198012345678, id='number_instead_of_string')
+    ]
+)
+async def test_user_cant_set_invalid_steam_id(client, make_user, invalid_steam_id):
+    user_id, headers = await make_user(UserRole.USER, steam_id=TEST_STEAM_ID)
+    url = f'{BASE_URL}/{user_id}'
+
+    response = await client.patch(
+        url,
+        headers=headers,
+        json={'steam_id': invalid_steam_id}
+    )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_CONTENT
+
+    response = await client.get(url, headers=headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()['steam_id'] == TEST_STEAM_ID
+
+
+async def test_users_can_set_same_steam_id(client, make_user):
+    users = [
+        await make_user(UserRole.USER),
+        await make_user(UserRole.USER),
+    ]
+
+    for user_id, headers in users:
+        response = await client.patch(
+            f'{BASE_URL}/{user_id}',
+            headers=headers,
+            json={'steam_id': TEST_STEAM_ID}
+        )
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()['id'] == user_id
+        assert response.json()['steam_id'] == TEST_STEAM_ID
+
+    for user_id, headers in users:
+        response = await client.get(f'{BASE_URL}/{user_id}', headers=headers)
+
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()['id'] == user_id
+        assert response.json()['steam_id'] == TEST_STEAM_ID
+
+
+@pytest.mark.parametrize(
+    'payload, expected_name',
+    [
+        pytest.param({}, None, id='empty_patch'),
+        pytest.param({'name': 'Vasya'}, 'Vasya', id='update_other_field'),
+    ]
+)
+async def test_user_update_without_new_steam_id_preserves_old_one(
+    client, make_user, payload, expected_name
+):
+    user_id, headers = await make_user(UserRole.USER, steam_id=TEST_STEAM_ID)
+    url = f'{BASE_URL}/{user_id}'
+
+    response = await client.patch(url, headers=headers, json=payload)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()['steam_id'] == TEST_STEAM_ID
+    assert response.json()['name'] == expected_name
+
+    response = await client.get(url, headers=headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()['steam_id'] == TEST_STEAM_ID
+    assert response.json()['name'] == expected_name

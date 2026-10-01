@@ -66,11 +66,12 @@ async def client(session):
 @pytest.fixture(scope='function')
 def make_user(session):
     user_counter = itertools.count(start=1)
-    async def factory(role: UserRole):
+    async def factory(role: UserRole, steam_id: str | None = None):
         user = User(
             username=f'test_user_{next(user_counter)}',
             role=role,
-            password_hash='aboba123'
+            password_hash='aboba123',
+            steam_id=steam_id
         )
         session.add(user)
         await session.flush()
